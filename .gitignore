@@ -4,7 +4,9 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
+
+# Apple macOS
 .DS_Store
 
-#Add project specific files
+# Add project specific files
 include/mqtt.configuration.h
