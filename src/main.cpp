@@ -151,9 +151,6 @@ BH1750 lightMeter(BH1750_ADDR);
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(1, NeoPixel, NEO_GRB + NEO_KHZ800);
 WiFiClient espClient;
 PubSubClient client(espClient);
-StaticJsonDocument<2048> jsonReceivedCommand;
-StaticJsonDocument<256> jsonSensorsData;
-StaticJsonDocument<512> jsonDeviceData;
 
 void setup(void)
 {
@@ -212,8 +209,10 @@ void setup(void)
     Serial.println("Connected to the WiFi Network!");
   }
 
- // Setup the MQTT Client
-  client.setServer(mqtt_server, mqtt_server_port);
+  // Setup the MQTT Client
+  //client.setServer(mqtt_server_ip, mqtt_server_port); // Connect to the MQTT Broker using IP
+  client.setServer(mqtt_server, mqtt_server_port); // Connect to the MQTT Broker using URL
+  client.setBufferSize(2048);
   client.setCallback(messageReceived);
 
   // Initialize BH1750
@@ -301,6 +300,7 @@ void loop(void)
       previousTime1 = currentTime;
       previousTime2 = currentTime;
       counter1++;
+
       publishSensorsData(rawTemperature, temperature, pressure, rawHumidity, humidity, iaq, staticIaq, iaqAccuracy, gasResistance, co2Equivalent, breathVocEquivalent, lux);
     }
 
@@ -348,7 +348,7 @@ String GetDeviceName()
   String ssidDeviceName;
   WiFi.macAddress(mac);
   sprintf(macStr, "%02X%02X", mac[4], mac[5]);
-  ssidDeviceName = ssid1 + "-" + String(macStr);
+  ssidDeviceName = ssid1 + String(macStr);
   return  ssidDeviceName;  
 }
 
@@ -411,6 +411,7 @@ void messageReceived(char* topic, byte* payload, unsigned int length)
   }
 
 // Deserialize the JSON document
+  DynamicJsonDocument jsonReceivedCommand(2048);
   DeserializationError error = deserializeJson(jsonReceivedCommand, payload);
 
   // Test if parsing succeeds.
@@ -420,18 +421,15 @@ void messageReceived(char* topic, byte* payload, unsigned int length)
     return;
   }
   // Fetch values.
-  // Most of the time, you can rely on the implicit casts.
-  // In other case, you can do doc["time"].as<long>();
-    if(jsonReceivedCommand["value"].as<String>() == "restart")
+  if(jsonReceivedCommand["value"].as<String>() == "restart")
   {
-    if (debug == true)
-    {
-      Serial.println("ESP8266 about to be restarted");
-      delay (3000);
-    }
+    Serial.print("Disconnecting from ");
+    Serial.println(mqtt_server);
+    client.disconnect();
+    Serial.println("ESP8266 is going to be restarted");
+    delay (1000);
     ESP.restart();
   }
-  jsonReceivedCommand.clear();
 }
 
 // Function to check BME680 status.
@@ -481,7 +479,7 @@ void RGB_color(int red_light_value, int green_light_value, int blue_light_value,
 // function called to publish Sensors data (Temperature, Pressure, Humidity, IAQ and Lux).
 void publishSensorsData(float raw_t, float t, float p, float raw_h, float h, float iaq, float s_iaq, byte iaq_acy, float gas_rst, float co2_eq, float bvoc_eq, unsigned int lux)
 {
-  jsonSensorsData.clear();
+  StaticJsonDocument<256> jsonSensorsData;
   jsonSensorsData["msg_type"] = "srs";
   // BME680
   jsonSensorsData["raw_t"] = raw_t;
@@ -511,7 +509,7 @@ void publishSensorsData(float raw_t, float t, float p, float raw_h, float h, flo
 // function called to publish Device information (Type, Model, Version, Firmware Flavor, Firmware version, MAC, IP, WiFi Signal Quality, Uptime, etc.).
 void publishDeviceData(String dev_t, String dev_m, String dev_v, String fw_f, String fw_v, String mac, String ip, byte s_qty, unsigned long up, String rst_r, unsigned int free_heap, byte heap_frg)
 {
-  jsonDeviceData.clear();
+  StaticJsonDocument<512> jsonDeviceData;
   jsonDeviceData["msg_type"] = "dev";
   // Device
   jsonDeviceData["dev_t"] = dev_t;
