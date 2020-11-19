@@ -96,7 +96,7 @@
 
 unsigned long mqttSensorsReportPeriod = 60000; // Sensors Report Period (Miliseconds).
 unsigned int mqttDeviceReportPeriod = 10; // Device Report Period (times) based on MQTTSensorsReportPeriod.
-uint16_t brightness = 100; //MeoPixel Brightness. [0-255]
+uint16_t brightness = 100; //NeoPixel Brightness. [0-255]
 int resetPortal = 180; //Number of seconds until the WiFiManager resests ESP8266.
 #define AP_Password "eSense.movasim"
 
