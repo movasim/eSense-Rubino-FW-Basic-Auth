@@ -410,23 +410,34 @@ void messageReceived(char* topic, byte* payload, unsigned int length)
     Serial.println();
   }
 
-// Deserialize the JSON document
+  // Deserialize the JSON document
   DynamicJsonDocument jsonReceivedCommand(2048);
   DeserializationError error = deserializeJson(jsonReceivedCommand, payload);
 
   // Test if parsing succeeds.
-  if (error) {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.f_str());
+  if (error)
+  {
+    if (debug == true)
+    {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+    }
     return;
   }
+  
   // Fetch values.
   if(jsonReceivedCommand["value"].as<String>() == "restart")
   {
-    Serial.print("Disconnecting from ");
-    Serial.println(mqtt_server);
+    if (debug == true)
+    {
+      Serial.print("Disconnecting from ");
+      Serial.println(mqtt_server);
+    }
     client.disconnect();
-    Serial.println("ESP8266 is going to be restarted");
+    if (debug == true)
+    {
+      Serial.println("ESP8266 is going to be restarted");
+    }
     delay (1000);
     ESP.restart();
   }
