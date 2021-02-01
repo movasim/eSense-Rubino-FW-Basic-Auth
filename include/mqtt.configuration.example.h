@@ -1,5 +1,5 @@
 /*
-  eSense Rubino
+  eSense Rubino. Basic-Authentication Firmware flavor.
   Environmental Sensing Device based on Espressif ESP8266, Bosch BME680
   and ROHM BH1750.
 
