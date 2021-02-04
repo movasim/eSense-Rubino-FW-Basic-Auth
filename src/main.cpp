@@ -1,5 +1,5 @@
 /*
-  eSense Rubino
+  eSense Rubino. Basic-Authentication Firmware flavor.
   Environmental Sensing Device based on Espressif ESP8266, Bosch BME680
   and ROHM BH1750.
 
@@ -61,13 +61,9 @@
     - AccesPoint Mode | WHITE
     Once Connected to WiFi:
       - Calibrating | BLUE
-      - Excellent (IAQ = 0-50) | GREEN
-      - Good (IAQ = 51-100) | LIGHT-GREEN
-      - Lightly Polluted (IAQ = 101-150) | YELLOW
-      - Moderately Polluted (IAQ = 151-200) | ORANGE
-      - Heavily Polluted (IAQ = 201-250) | RED
-      - Severely Polluted (IAQ = 251-350) | MAGENTA
-      - Extremely Polluted (IAQ > 351) | PINK
+      - Good (IAQ = 0-50) | GREEN
+      - Lightly Polluted (IAQ = 51-150) | YELLOW
+      - Polluted (IAQ > 150) | RED
     
   =======================
   = Jumper =
@@ -94,10 +90,11 @@
 
 // ========== Start Device User Parametrization ================================================================
 
-unsigned long mqttSensorsReportPeriod = 60000; // Sensors Report Period (Miliseconds).
-unsigned int mqttDeviceReportPeriod = 10; // Device Report Period (times) based on MQTTSensorsReportPeriod.
-uint16_t brightness = 100; //NeoPixel Brightness. [0-255]
-int resetPortal = 180; //Number of seconds until the WiFiManager resests ESP8266.
+#define Alias "Production";                     // Friendly name for the Device location.
+unsigned long mqttSensorsReportPeriod = 60000;  // Sensors Report Period (Miliseconds).
+unsigned int mqttDeviceReportPeriod = 10;       // Device Report Period (times) based on MQTTSensorsReportPeriod.
+uint16_t brightness = 100;                      //NeoPixel Brightness. [0-255]
+int resetPortal = 180;                          //Number of seconds until the WiFiManager resests ESP8266.
 #define AP_Password "eSense.movasim"
 
 // ========== Start Device Development Parametrization (ONLY MODIFY WHEN NEW HW/FW VERSION IS RELASED) =========
@@ -106,7 +103,8 @@ int resetPortal = 180; //Number of seconds until the WiFiManager resests ESP8266
 #define DeviceModel "Rubino"
 #define DeviceVersion "1.1.1"
 #define FirmwareFlavor "Basic-Auth"
-#define FirmwareVersion "1.0.0"
+#define FirmwareVersion "1.1.0"
+
 #define BME680_ADDR 0X77
 #define BH1750_ADDR 0X23
 #define NeoPixel 14
@@ -125,9 +123,8 @@ const char* mqtt_clientId;
 const char* mqtt_publish_topic = MQTT_PUBLISH_TOPIC;
 const char* mqtt_subscribe_topic = MQTT_SUBSCRIBE_TOPIC;
 unsigned long currentTime;
-unsigned long previousTime1 = 0;
-unsigned long previousTime2 = 0;
-unsigned int counter1 = 0;
+unsigned long previousTime = 0;
+unsigned int counter = 0;
 float rawTemperature, pressure, rawHumidity, gasResistance, iaq, temperature, humidity, staticIaq, co2Equivalent, breathVocEquivalent;
 byte iaqAccuracy;
 unsigned int lux;
@@ -155,6 +152,8 @@ PubSubClient client(espClient);
 void setup(void)
 {
   Serial.begin(115200);
+  while (!Serial);      // Wait for hardware serial to appear.
+
   Wire.begin(SDA, SCL);
   pixels.begin(); 
 
@@ -210,8 +209,8 @@ void setup(void)
   }
 
   // Setup the MQTT Client
-  //client.setServer(mqtt_server_ip, mqtt_server_port); // Connect to the MQTT Broker using IP
-  client.setServer(mqtt_server, mqtt_server_port); // Connect to the MQTT Broker using URL
+  client.setServer(mqtt_server_ip, mqtt_server_port); // Connect to the MQTT Broker using IP
+  //client.setServer(mqtt_server, mqtt_server_port); // Connect to the MQTT Broker using URL
   client.setBufferSize(2048);
   client.setCallback(messageReceived);
 
@@ -246,7 +245,6 @@ void setup(void)
   checkIaqSensorStatus();
 }
 
-// Function that is looped forever
 void loop(void)
 {
   currentTime = millis();
@@ -273,21 +271,13 @@ void loop(void)
       breathVocEquivalent = iaqSensor.breathVocEquivalent;
       
       if (iaqAccuracy == 0)
-      RGB_color(0, 0, 255, brightness); // Callibrating | BLUE
-      else if (staticIaq < 50)
-        RGB_color(0, 255, 0, brightness); // Excellent (IAQ = 0-50) | GREEN
-      else if ((staticIaq >= 50) & (staticIaq < 100))
-        RGB_color(50, 255, 50, brightness); // Good (IAQ = 51-100) | LIGHT-GREEN
-      else if ((staticIaq >= 100) & (staticIaq < 150))
+        RGB_color(0, 0, 255, brightness);   // Callibrating | BLUE
+      else if (staticIaq <= 50)
+        RGB_color(0, 255, 0, brightness);   // Good (IAQ = 0-50) | GREEN
+      else if (staticIaq <= 150)
         RGB_color(255, 170, 0, brightness); // Lightly Polluted (IAQ = 101-150) | YELLOW
-      else if ((staticIaq >= 150) & (staticIaq < 200))
-        RGB_color(255, 34, 0, brightness); // Moderately Polluted (IAQ = 151-200) | ORANGE
-      else if ((staticIaq >= 200) & (staticIaq < 250))
-        RGB_color(255, 0, 0, brightness); // Heavily Polluted (IAQ = 201-250) | RED
-      else if ((staticIaq >= 250) & (staticIaq < 350))
-        RGB_color(255, 0, 51, brightness); // Severely Polluted (IAQ = 251-350) | MAGENTA
       else
-        RGB_color(255, 51, 119, brightness); // Extremely Polluted (IAQ > 351) | PINK
+        RGB_color(255, 0, 0, brightness);   // Polluted (IAQ > 151) | RED
   } else 
   {
     checkIaqSensorStatus();
@@ -295,18 +285,17 @@ void loop(void)
 
    lux = lightMeter.readLightLevel(); // Reads BH1750.
 
-    if (currentTime - previousTime1 >= mqttSensorsReportPeriod)
+    if (currentTime - previousTime >= mqttSensorsReportPeriod)
     {
-      previousTime1 = currentTime;
-      previousTime2 = currentTime;
-      counter1++;
+      previousTime = currentTime;
+      counter++;
 
       publishSensorsData(rawTemperature, temperature, pressure, rawHumidity, humidity, iaq, staticIaq, iaqAccuracy, gasResistance, co2Equivalent, breathVocEquivalent, lux);
     }
 
-    if ((counter1 == mqttDeviceReportPeriod) && (currentTime - previousTime2 >= (mqttSensorsReportPeriod/2)))
+    if ((counter == mqttDeviceReportPeriod) && (currentTime - previousTime >= (mqttSensorsReportPeriod/2)))
     {
-      counter1 = 0;
+      counter = 0;
 
       String deviceType = DeviceType;
       String deviceModel = DeviceModel;
@@ -483,7 +472,7 @@ void errLeds(void)
 // Function to set the NeoPixel color.
 void RGB_color(int red_light_value, int green_light_value, int blue_light_value, uint16_t brightness)
  {
-  pixels.setPixelColor(0, pixels.Color((brightness*red_light_value/255), (brightness*blue_light_value/255), (brightness*green_light_value/255)));
+  pixels.setPixelColor(0, pixels.Color((brightness*red_light_value/255), (brightness*green_light_value/255), (brightness*blue_light_value/255)));
   pixels.show(); // This sends the updated pixel color to the hardware.
 }
 
@@ -506,6 +495,8 @@ void publishSensorsData(float raw_t, float t, float p, float raw_h, float h, flo
   jsonSensorsData["bvoc_eq"] = bvoc_eq;
   // BH1750
   jsonSensorsData["lux"] = lux;
+  // Physical location of the device.
+  jsonSensorsData["alias"] = Alias;
   
   char buffer[256];
   serializeJson(jsonSensorsData, buffer);
@@ -535,6 +526,7 @@ void publishDeviceData(String dev_t, String dev_m, String dev_v, String fw_f, St
   jsonDeviceData["rst_r"] = rst_r;
   jsonDeviceData["free_heap"] = free_heap;
   jsonDeviceData["heap_frg"] = heap_frg;
+  jsonDeviceData["debug"] = debug;
 
   char buffer[512];
   serializeJson(jsonDeviceData, buffer);
