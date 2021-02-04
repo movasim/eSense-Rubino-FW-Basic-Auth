@@ -7,36 +7,37 @@ This is the Basic-Authentication Firmware flavor of the eSense Rubino device, pr
 | :-------------------- | :-------------------- | :-------------- | :------------- |
 | Yes *(User/Pasword)*  | No                    | No              | No             |
 
-The Firmware reads sensors and device status and periodically reports two types of MQTT messages to **IoTek-enviro Service**, both in JSON format.
+The Firmware reads sensors and device status and periodically reports two types of MQTT messages to [**MOVASIM**](https://movasim.com/) **IoTek** Platform, both in JSON format.
 
 The **Sensors Data** message contains the following information:
 
 ```json
-{"msg_type":"srs","raw_t":27.45,"t":27.38531,"p":1019.54,"raw_h":48.041,"h":48.21092,"iaq":16.27032,"s_iaq":21.18662,"iaq_acy":1,"gas_rst":145526,"co2_eq":484.7465,"bvoc_eq":0.471993,"lux":234}
+{"msg_type":"srs","raw_t":27.45,"t":27.38531,"p":1019.54,"raw_h":48.041,"h":48.21092,"iaq":16.27032,"s_iaq":21.18662,"iaq_acy":1,"gas_rst":145526,"co2_eq":484.7465,"bvoc_eq":0.471993,"lux":234,"alias":"Production" }
 ```
 
 Where:
 
-| Key        | Key Description       | Value      | Value Description                                            |
-| ---------- | --------------------- | ---------- | ------------------------------------------------------------ |
-| `Msg_type` | Message Type          | `srs`      | Sensors Data                                                 |
-| `raw_t`    | Raw Temperature       | `27.45`    | [ºC] Celsius Degrees                                         |
-| `t`        | Temperature           | `27.38531` | [ºC] Celsius Degrees                                         |
-| `p`        | Pressure              | `1019.54`  | [hPa] Hectopascal                                            |
-| `raw_h`    | Raw Humidity          | `48.041`   | [%] Percentage                                               |
-| `h`        | Humidity              | `48.21092` | [%] Percentage                                               |
-| `iaq`      | IAQ Index             | `16.27032` | [Index defined by Bosch Library](https://github.com/movasim/eSense-Rubino#Feature-Description) |
-| `s_iaq`    | Static IAQ Index      | `21.18662` | [Index defined by Bosch Library](https://github.com/movasim/eSense-Rubino#Feature-Description) |
-| `iaq_acy`  | IAQ Accuracy          | `1`        | [State of the BME680 sensor calibration](https://github.com/movasim/eSense-Rubino#gas-sensor-measuring-relative-humidity-barometric-pressure-ambient-temperature-and-gas-voc). |
-| `gas_rst`  | Gas Resistance        | `145526`   | Internal sensor gas resistance used by algotith to calculate IAQ. |
-| `co2_eq`   | Co2 Equivalent        | `84.7465`  | Estimates a CO2-equivalent concentration [ppm]               |
-| `bvoc_eq`  | Breath VOC Equivalent | `0.471993` | Breath VOC equivalent estimates total VOC concentration in [ppm] |
-| `lux`      | Illuminance           | `234`      | LUX                                                          |
+| Key        | Key Description       | Value        | Value Description                                            |
+| ---------- | --------------------- | ------------ | ------------------------------------------------------------ |
+| `Msg_type` | Message Type          | `srs`        | Sensors Data                                                 |
+| `raw_t`    | Raw Temperature       | `27.45`      | [ºC] Celsius Degrees                                         |
+| `t`        | Temperature           | `27.38531`   | [ºC] Celsius Degrees                                         |
+| `p`        | Pressure              | `1019.54`    | [hPa] Hectopascal                                            |
+| `raw_h`    | Raw Humidity          | `48.041`     | [%] Percentage                                               |
+| `h`        | Humidity              | `48.21092`   | [%] Percentage                                               |
+| `iaq`      | IAQ Index             | `16.27032`   | [Index defined by Bosch Library](https://github.com/movasim/eSense-Rubino#Feature-Description) |
+| `s_iaq`    | Static IAQ Index      | `21.18662`   | [Index defined by Bosch Library](https://github.com/movasim/eSense-Rubino#Feature-Description) |
+| `iaq_acy`  | IAQ Accuracy          | `1`          | [State of the BME680 sensor calibration](https://github.com/movasim/eSense-Rubino#gas-sensor-measuring-relative-humidity-barometric-pressure-ambient-temperature-and-gas-voc). |
+| `gas_rst`  | Gas Resistance        | `145526`     | Internal sensor gas resistance used by algotith to calculate IAQ. |
+| `co2_eq`   | Co2 Equivalent        | `84.7465`    | Estimates a CO2-equivalent concentration [ppm]               |
+| `bvoc_eq`  | Breath VOC Equivalent | `0.471993`   | Breath VOC equivalent estimates total VOC concentration in [ppm] |
+| `lux`      | Illuminance           | `234`        | LUX                                                          |
+| `alias`    | Alias                 | `Production` | Free Text *(Normally the device physical location)*          |
 
 And the **Device Data** message contains the following information:
 
 ```json
-{"msg_type":"dev","dev_t":"eSense","dev_m":"Rubino","dev_v":"1.1.1","fw_f":"Basic-Auth","fw_v":"1.0.0","mac":"2C:F4:32:7A:10:EE","ip":"192.168.4.125","s_qty":100,"up":630001,"rst_r":"External System","free_heap":41376,"heap_frg":2}
+{"msg_type":"dev","dev_t":"eSense","dev_m":"Rubino","dev_v":"1.1.1","fw_f":"Basic-Auth","fw_v":"1.0.0","mac":"2C:F4:32:7A:10:EE","ip":"192.168.4.125","s_qty":100,"up":630001,"rst_r":"External System","free_heap":41376,"heap_frg":2,"debug":true}
 ```
 
 Where:
@@ -56,8 +57,9 @@ Where:
 | `rst_r`     | Reseat Reason             | `External System`   | Reason of the last Device Reset.                             |
 | `free_heap` | Free Memory Heap          | `41376`             | free heap size in bytes.                                     |
 | `heap_frg`  | Memory Heap Fragmentation | `2`                 | [%] Percentage. *(0% is clean, more than ~50% is not harmless)* |
+| `debug`     | Debug Mode                | `true`              | Indicates whether Jumper (JP1) is in "Debug" or "Production" position [true:false] |
 
-Periodicity of both reports to **IoTek-enviro Service** can be configured in the *"Device User Parametrization"* section, described in the section below.
+Periodicity of both reports to **IoTek** can be configured in the *"Device User Parametrization"* section, described in the section below.
 
 ## Firmware Configuration and Compilation
 
@@ -79,13 +81,13 @@ The content of the mqtt.configuration.example.h file is as follows:
 #define MQTT_SUBSCRIBE_TOPIC "command///req/#"
 ```
 
-It is neccesary to edit the file contents with the MQTT data that should be provided by **IoTek-enviro Service** when the device is provisioned in the platform.
+It is neccesary to edit the file contents with the MQTT data that should be provided by **IoTek Service** when the device is provisioned in the platform.
 
 In summary, the steps to follow to compile and install the **eSense Rubino Basic-Authentication Firmware** on the microcontroller board are the following:
 
 1. Download the project code *(or clone it in the desired directory)*.
 2. Rename the file inside the `/include` directory from `mqtt.configuration.example.h` to `mqtt.configuration.h` *(just delete "example")*.
-3. Edit the file giving it the MQTT information provided by **IoTek-enviro service** at the moment of provisioning your device.
+3. Edit the file giving it the MQTT information provided by **IoTek service** at the moment of provisioning your device.
 4. Compile the project.
 5. Download it to the eSense Rubino board via USB cable.
 
@@ -94,6 +96,7 @@ Only for those cases where is neccesary to modify pre-defined behaviuor of the F
 ```c++
 // ========== Start Device User Parametrization ================================================================
 
+#define Alias "Production";                     // Friendly name for the Device location.
 unsigned long mqttSensorsReportPeriod = 60000; // Sensors Report Period (Miliseconds).
 unsigned int mqttDeviceReportPeriod = 10; // Device Report Period (times) based on MQTTSensorsReportPeriod.
 uint16_t brightness = 100; //NeoPixel Brightness. [0-255]
@@ -106,7 +109,7 @@ int resetPortal = 180; //Number of seconds until the WiFiManager resests ESP8266
 #define DeviceModel "Rubino"
 #define DeviceVersion "1.1.1"
 #define FirmwareFlavor "Basic-Auth"
-#define FirmwareVersion "1.0.0"
+#define FirmwareVersion "1.1.0"
 #define BME680_ADDR 0X77
 #define BH1750_ADDR 0X23
 #define NeoPixel 14
@@ -122,6 +125,9 @@ instead, the "**Device Development Parametrization**" section should only be mod
 
 ## License
 
-This project by [MOVASIM](https://movasim.com/) is licensed under the [GNU General Public License V3.0](https://github.com/movasim/eSense-Rubino-FW-Basic-Auth/blob/main/LICENSE).
-[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+This project by [**MOVASIM**](https://movasim.com/) is licensed under the [MIT License](https://github.com/movasim/eSense-Rubino-FW-Basic-Auth/blob/main/LICENSE).
+
+![](images/MIT.svg)
+
+
 
